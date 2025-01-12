@@ -9,12 +9,12 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-@Repository
+//@Repository
 public class RedisSessionRepository {
 
     private final RedisTemplate<String, Object> redisTemplate;
 
-    @Autowired
+//    @Autowired
     public RedisSessionRepository(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }

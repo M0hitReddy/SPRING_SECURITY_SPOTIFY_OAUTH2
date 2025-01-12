@@ -17,11 +17,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
-@Service
+//@Service
 public class RedisOAuth2AuthorizedClientService implements OAuth2AuthorizedClientService {
     private final RedisTemplate<String, Object> redisTemplate;
 
-    @Autowired
+//    @Autowired
     public RedisOAuth2AuthorizedClientService(RedisTemplate<String, Object> redisTemplate, ObjectMapper objectMapper) {
         this.redisTemplate = redisTemplate;
     }
@@ -53,9 +53,9 @@ public class RedisOAuth2AuthorizedClientService implements OAuth2AuthorizedClien
             // Extract and reconstruct objects as shown earlier
             ClientRegistration clientRegistration = reconstructClientRegistration((Map<String, Object>) data.get("clientRegistration"));
             OAuth2AccessToken accessToken = reconstructAccessToken((Map<String, Object>) data.get("accessToken"));
-            OAuth2RefreshToken refreshToken = reconstructRefreshToken((Map<String, Object>) data.get("refreshToken"));
+//            OAuth2RefreshToken refreshToken = reconstructRefreshToken((Map<String, Object>) data.get("refreshToken"));
 
-            return (T) new OAuth2AuthorizedClient(clientRegistration, principalName, accessToken, refreshToken);
+            return (T) new OAuth2AuthorizedClient(clientRegistration, principalName, accessToken);
         }
 
         return null;

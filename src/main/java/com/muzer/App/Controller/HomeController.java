@@ -16,15 +16,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/")
 public class HomeController {
 
-    @Autowired
-    public AccessTokenService accessTokenService;
-    @Autowired
-    public RedisTemplate<String, Object> template;
+    private final AccessTokenService accessTokenService;
+
+//    @Autowired
+    public HomeController(AccessTokenService accessTokenService) {
+        this.accessTokenService = accessTokenService;
+    }
+//    @Autowired
+//    public RedisTemplate<String, Object> template;
     @RequestMapping("/")
     public String home() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        Object obj = template.opsForValue().get("oauth2:client:spotify:31zhwyrlx7img3z24d3rj3nqdewe");
+//        Object obj = template.opsForValue().get("oauth2:client:spotify:31zhwyrlx7img3z24d3rj3nqdewe");
 
-        return "Access Token: " + accessTokenService.getAccessToken() + "   " +  auth + obj;
+        return "Access Token: " + accessTokenService.getAccessToken() + "   " +  auth;
     }
 }

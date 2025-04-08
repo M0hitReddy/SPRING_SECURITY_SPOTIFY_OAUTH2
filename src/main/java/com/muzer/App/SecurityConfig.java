@@ -1,42 +1,25 @@
 package com.muzer.App;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.muzer.App.AuthenticationSpotify.SpotifyAuthProvider;
+import com.muzer.App.Beans.CustomAuthenticationEntryPoint;
 import com.muzer.App.Config.CustomOAuth2SuccessHandler;
 import com.muzer.App.Filters.AddAuthHeaderFilter;
-import com.muzer.App.Repository.RedisSessionRepository;
+import com.muzer.App.Repository.UserRepository;
 import com.muzer.App.Service.CustomOAuth2UserService;
-import com.muzer.App.Service.CustomOauth2AuthorizedClientService;
-import com.muzer.App.Service.RedisOAuth2AuthorizedClientService;
-import jakarta.servlet.http.Cookie;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
-import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
-import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
-import org.springframework.security.oauth2.client.registration.InMemoryClientRegistrationRepository;
-import org.springframework.security.oauth2.core.AuthorizationGrantType;
-import org.springframework.security.oauth2.core.ClientAuthenticationMethod;
-import org.springframework.security.oauth2.core.OAuth2AuthenticatedPrincipal;
-import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtDecoderFactory;
 import org.springframework.security.oauth2.jwt.JwtDecoders;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.logout.CookieClearingLogoutHandler;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 import org.springframework.web.cors.CorsConfiguration;
 
@@ -44,7 +27,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-public class SecurityConfig  {
+public class SecurityConfig {
 
 //    @Value("${spring.security.oauth2.client.registration.spotify.client-id}")
 //    private String spotifyClientId;
@@ -58,19 +41,24 @@ public class SecurityConfig  {
 //    @Autowired
 //    public RedisTemplate<String, Object> redisTemplate;
 
-//    @Bean
+    //    @Bean
 //    public OAuth2AuthorizedClientService authorizedClientService() {
 //        return new CustomOauth2AuthorizedClientService();
 //    }
     private final OAuth2AuthorizedClientService authorizedClientService;
-    @Autowired public CustomOAuth2UserService customOAuth2UserService;
+    private final CustomOAuth2UserService customOAuth2UserService;
+    private final UserRepository userRepository;
+    private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
-    public SecurityConfig(OAuth2AuthorizedClientService authorizedClientService) {
+    public SecurityConfig(OAuth2AuthorizedClientService authorizedClientService,
+                          CustomOAuth2UserService customOAuth2UserService,
+                          UserRepository userRepository,
+                          CustomAuthenticationEntryPoint customAuthenticationEntryPoint) {
         this.authorizedClientService = authorizedClientService;
-//        this.customOAuth2UserService = customOAuth2UserService;
+        this.customOAuth2UserService = customOAuth2UserService;
+        this.userRepository = userRepository;
+        this.customAuthenticationEntryPoint = customAuthenticationEntryPoint;
     }
-
-
 
 
     @Bean
@@ -96,17 +84,30 @@ public class SecurityConfig  {
                         .jwt(jwt -> jwt
                                 .jwkSetUri("https://www.googleapis.com/oauth2/v3/certs")))
                 .sessionManagement(sessionManagement ->
-                        sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        sessionManagement.sessionCreationPolicy(authorizedClientService.))
                 .oauth2Login(oauth2Login -> oauth2Login
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .userService(customOAuth2UserService)
-                        )
-                        .authorizedClientService(authorizedClientService)
-                        .successHandler(new CustomOAuth2SuccessHandler(authorizedClientService))
 
+                                .authorizedClientService(authorizedClientService)
+                                .userInfoEndpoint(userInfo -> userInfo
+                                        .userService(customOAuth2UserService)
+                                )
+//                        .authorizedClientService(authorizedClientService)
+                                .successHandler(new CustomOAuth2SuccessHandler(authorizedClientService, userRepository))
+
+                )
+                .logout(logout -> logout
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            response.setStatus(200);
+                        })
+                        .addLogoutHandler(new CookieClearingLogoutHandler("JSESSIONID", "token", "idToken"))
+                )
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint(customAuthenticationEntryPoint)
                 );
         return http.build();
     }
+
+
 //    @Bean
 //    public JwtDecoder jwtDecoder() {
 //
@@ -197,10 +198,10 @@ public class SecurityConfig  {
 //    }
 
 
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        return new SpotifyAuthProvider();
-    }
+//    @Bean
+//    public AuthenticationProvider authenticationProvider() {
+//        return new SpotifyAuthProvider();
+//    }
 
 
 }

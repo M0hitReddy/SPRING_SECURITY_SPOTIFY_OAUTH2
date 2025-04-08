@@ -1,12 +1,15 @@
 package com.muzer.App.Config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.muzer.App.Models.User;
+import com.muzer.App.Repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
@@ -25,16 +28,23 @@ import java.util.*;
 public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler {
 
     private final OAuth2AuthorizedClientService authorizedClientService;
+    private final UserRepository userRepository;
 
-    public CustomOAuth2SuccessHandler(OAuth2AuthorizedClientService authorizedClientService) {
+    public CustomOAuth2SuccessHandler(OAuth2AuthorizedClientService authorizedClientService, UserRepository userRepository) {
         this.authorizedClientService = authorizedClientService;
+        this.userRepository = userRepository;
     }
 
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
         OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient("google", authentication.getName());
-//        System.out.println(client);
+
+        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+        for (GrantedAuthority authority : authorities) {
+            String role = authority.getAuthority();
+            System.out.println("Role: " + role);
+        }
         if (client != null && client.getAccessToken() != null) {
             List<Cookie> cookies = getCookies(client);
 //            System.out.println(cookies.get(0).getValue() + "::::" + cookies.get(1).getValue());
@@ -42,6 +52,32 @@ public class CustomOAuth2SuccessHandler implements AuthenticationSuccessHandler 
             response.addCookie(cookies.get(1));
 //            System.out.println("c1 ::::: " + cookies.get(0).getMaxAge());
 //            System.out.println("c2 ::::: " + cookies.get(1).getMaxAge());
+            String email = ((DefaultOidcUser) authentication.getPrincipal()).getEmail();
+            String name = ((DefaultOidcUser) authentication.getPrincipal()).getFullName();
+            String picture = ((DefaultOidcUser) authentication.getPrincipal()).getPicture();
+            String googleId = ((DefaultOidcUser) authentication.getPrincipal()).getSubject();
+
+
+            User user = userRepository.findByEmail(email);
+            if (user == null) {
+                // Create new user
+                user = new User();
+                user.setGoogleId(googleId);
+                user.setEmail(email);
+                user.setName(name);
+                user.setProfilePicture(picture);
+
+                // Save user and ensure the save operation completes
+                userRepository.save(user);
+
+            } else {
+                // Update existing user's information
+                user.setGoogleId(googleId);
+                user.setName(name);
+                user.setProfilePicture(picture);
+                userRepository.save(user);
+//                log.info("Existing user updated: {}", user);
+            }
             response.sendRedirect("http://localhost:5173/callback?success=true");
 //            System.out.println(cookie.getValue());
 

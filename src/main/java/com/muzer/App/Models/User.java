@@ -14,6 +14,19 @@ public class User {
     private Long id;
     @Column(nullable = false, unique = true)
     private String email;
+    private String googleId;
+    private String name;
+    private String profilePicture;
+
+
+
+    public String getGoogleId() {
+        return googleId;
+    }
+
+    public void setGoogleId(String googleId) {
+        this.googleId = googleId;
+    }
 
     public Long getId() {
         return id;
@@ -47,8 +60,7 @@ public class User {
         this.profilePicture = profilePicture;
     }
 
-    private String name;
-    private String profilePicture;
+
 
 
 

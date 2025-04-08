@@ -25,10 +25,10 @@ public class HomeController {
 //    @Autowired
 //    public RedisTemplate<String, Object> template;
     @RequestMapping("/")
-    public String home() {
+    public Object home() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
 //        Object obj = template.opsForValue().get("oauth2:client:spotify:31zhwyrlx7img3z24d3rj3nqdewe");
 
-        return "Access Token: " + accessTokenService.getAccessToken() + "   " +  auth;
+        return auth.getPrincipal();
     }
 }
